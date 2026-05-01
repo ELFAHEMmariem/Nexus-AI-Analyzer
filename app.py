@@ -14,15 +14,16 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
-# Import de ton processeur personnalisé (Assure-toi que le dossier 'core' existe)
+# Import de ton processeur personnalisé
 try:
     from core.processor import DocumentProcessor
 except ImportError:
     st.error("Le module core.processor est introuvable.")
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION DES CLES ---
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
+google_api_key = os.getenv("GOOGLE_API_KEY") 
 
 st.set_page_config(page_title="Nexus AI - Groq Edition", page_icon="⚡", layout="wide")
 
@@ -33,7 +34,7 @@ COUNTRIES = {
 }
 
 # --- INITIALISATION DU SESSION STATE ---
-if "auth_status" not in st.session_state: st.session_state.auth_status = "login"
+if "auth_status" not in st.session_state: st.session_state.auth_status = "start" # On commence par la page d'accueil
 if "processor" not in st.session_state: st.session_state.processor = DocumentProcessor()
 if "vector_db" not in st.session_state: st.session_state.vector_db = None
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -65,13 +66,27 @@ st.markdown("""
         color: black; border-radius: 50%; display: flex;
         justify-content: center; align-items: center; font-weight: bold;
     }
-    .main-title { text-align: center; margin-top: -30px; font-weight: 800; color: #f59e0b; font-size: 3rem; }
+    .main-title { text-align: center; margin-top: 50px; font-weight: 800; color: #f59e0b; font-size: 4rem; }
+    .sub-title { text-align: center; color: #94a3b8; font-size: 1.5rem; margin-bottom: 30px; }
     [data-testid="stSidebar"] { background-color: #0f172a; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 1. LOGIQUE D'AUTHENTIFICATION ---
-if st.session_state.auth_status == "login":
+
+# ÉTAPE A : PAGE D'ACCUEIL (Titre + Bouton Connexion)
+if st.session_state.auth_status == "start":
+    st.markdown("<h1 class='main-title'>Nexus AI Intelligence</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='sub-title'>Analyse de documents et intelligence augmentée</p>", unsafe_allow_html=True)
+    
+    _, col, _ = st.columns([1, 0.6, 1])
+    with col:
+        if st.button("🚀 Se connecter à Nexus", use_container_width=True):
+            st.session_state.auth_status = "login"
+            st.rerun()
+
+# ÉTAPE B : FORMULAIRE D'INSCRIPTION
+elif st.session_state.auth_status == "login":
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown("<h2 style='text-align: center;'>✨ Inscription Nexus</h2>", unsafe_allow_html=True)
@@ -90,6 +105,7 @@ if st.session_state.auth_status == "login":
                     st.session_state.auth_status = "verify"
                     st.rerun()
 
+# ÉTAPE C : VÉRIFICATION CODE
 elif st.session_state.auth_status == "verify":
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
@@ -100,7 +116,7 @@ elif st.session_state.auth_status == "verify":
                 st.session_state.auth_status = "authenticated"
                 st.rerun()
 
-# --- 2. INTERFACE PRINCIPALE ---
+# --- 2. INTERFACE PRINCIPALE (Après connexion) ---
 elif st.session_state.auth_status == "authenticated":
     
     # Widget Profil Haut-Droit
@@ -121,10 +137,10 @@ elif st.session_state.auth_status == "authenticated":
             st.rerun()
         st.divider()
         if st.button("🚪 Déconnexion"):
-            st.session_state.auth_status = "login"
+            st.session_state.auth_status = "start" # Retour à la page d'accueil
             st.rerun()
 
-    st.markdown("<h1 class='main-title'>Nexus AI Intelligence</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #f59e0b; font-weight: 800; font-size: 3rem; margin-top: -30px;'>Nexus AI Intelligence</h1>", unsafe_allow_html=True)
 
     # Zone d'analyse
     _, mid_col, _ = st.columns([1, 2.5, 1])
@@ -158,7 +174,6 @@ elif st.session_state.auth_status == "authenticated":
     # Zone de Chat
     _, chat_col, _ = st.columns([1, 2.5, 1])
     with chat_col:
-        # Affichage des messages passés avec bouton Word
         for i, m in enumerate(st.session_state.messages):
             with st.chat_message(m["role"]):
                 st.markdown(m["content"])
@@ -170,7 +185,6 @@ elif st.session_state.auth_status == "authenticated":
                         key=f"dl_{i}"
                     )
 
-        # Entrée de texte
         if prompt := st.chat_input("Posez votre question..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"): st.markdown(prompt)
@@ -188,7 +202,6 @@ elif st.session_state.auth_status == "authenticated":
                         response = chain.invoke(prompt)
                         st.markdown(response)
                         
-                        # Bouton immédiat pour la réponse actuelle
                         st.download_button(
                             label="📄 Télécharger en Word",
                             data=generate_word_doc(response),

@@ -1,5 +1,11 @@
-temp/
-temp_url_file.pdf
-db_storage/
+# Sécurité : On ne pousse JAMAIS les clés
 .env
+
+# Fichiers temporaires générés par ton code
+temp_*
+*.docx
+
+# Fichiers système et cache
 __pycache__/
+.streamlit/
+.DS_Store
