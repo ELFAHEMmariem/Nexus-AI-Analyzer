@@ -21,4 +21,4 @@ Le code est organisé de manière modulaire :
     * `brain.py` : Orchestration de la chaîne de réponse (LLM + Contexte).
     * `vector_store.py` : Indexation et recherche sémantique.
 
-## ⚙️ Installation et Utilisation
+
